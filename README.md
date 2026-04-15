@@ -93,19 +93,19 @@ function AddBookButton() {
 }
 ```
 
-## Context methods
+## Fluent API
 
-Inside actions, `this` gives you the current state plus these methods:
+Actions have access to the current state and a set of built-in utility methods through `this`:
 
-| Method | Description |
-|--------|-------------|
+| | |
+|---|---|
 | `this.set(key, value)` | Set a field |
 | `this.get()` | Get full state |
 | `this.get(key)` | Get a single field |
 | `this.delete(key)` | Delete a field |
-| `this.delete(key, predicate)` | Remove array items matching predicate |
+| `this.delete(key, predicate)` | Remove array items matching a predicate |
 | `this.push(key, ...items)` | Append to an array |
 | `this.push(key, "start", ...items)` | Prepend to an array |
-| `this.pop(key)` | Remove and return last item |
-| `this.pop(key, "start")` | Remove and return first item |
+| `this.pop(key)` | Remove and return the last item |
+| `this.pop(key, "start")` | Remove and return the first item |
 | `this.reset()` | Reset all state to initial values |
