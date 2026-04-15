@@ -10,7 +10,7 @@ Reactive data layer for TypeScript and React Native. Praxis keeps your frontend 
 yarn add praxis
 ```
 
-## Quick start
+## Quick Start
 
 ```tsx
 import { createStore } from "praxis/react";
