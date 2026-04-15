@@ -13,7 +13,7 @@ yarn add praxis
 ## Quick start
 
 ```tsx
-import { createStore } from "praxis";
+import { createStore } from "praxis/react";
 import { View, Text, FlatList, Pressable } from "react-native";
 
 const useBooks = createStore(({ push, remove, reset }) => ({
