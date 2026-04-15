@@ -461,3 +461,192 @@ describe("createStore", () => {
     expect(useState().items).toEqual(["a", "c"]);
   });
 });
+
+describe("store (factory pattern)", () => {
+  it("should return the initial state", () => {
+    const { value } = store(($) => ({ count: 0 }));
+    expect(value.count).toBe(0);
+  });
+
+  it("should support $.set", () => {
+    const { value, setCount } = store(($) => ({
+      count: 0,
+      setCount: (n: number) => $.set("count", n),
+    }));
+    setCount(42);
+    expect(value.count).toBe(42);
+  });
+
+  it("should support $.get with key", () => {
+    const { doubled } = store(($) => ({
+      count: 10,
+      doubled: () => $.get("count") * 2,
+    }));
+    expect(doubled()).toBe(20);
+  });
+
+  it("should support $.get without key", () => {
+    const { sum } = store(($) => ({
+      a: 1,
+      b: 2,
+      sum: () => $.get().a + $.get().b,
+    }));
+    expect(sum()).toBe(3);
+  });
+
+  it("should support $.delete on a key", () => {
+    const { value, clear } = store(($) => ({
+      temp: "hello" as string | undefined,
+      clear: () => $.delete("temp"),
+    }));
+    clear();
+    expect(value.temp).toBeUndefined();
+  });
+
+  it("should support $.delete with predicate on arrays", () => {
+    const { value, remove } = store(($) => ({
+      items: [1, 2, 3] as number[],
+      remove: (n: number) => $.delete("items", (i: number) => i === n),
+    }));
+    remove(2);
+    expect(value.items).toEqual([1, 3]);
+  });
+
+  it("should support $.push (end by default)", () => {
+    const { value, add } = store(($) => ({
+      items: [1] as number[],
+      add: (n: number) => $.push("items", n),
+    }));
+    add(2);
+    expect(value.items).toEqual([1, 2]);
+  });
+
+  it("should support $.push with 'start' position", () => {
+    const { value, prepend } = store(($) => ({
+      items: [2, 3] as number[],
+      prepend: (n: number) => $.push("items", "start", n),
+    }));
+    prepend(1);
+    expect(value.items).toEqual([1, 2, 3]);
+  });
+
+  it("should support $.pop from end (default)", () => {
+    const { value, removeLast } = store(($) => ({
+      items: [1, 2, 3] as number[],
+      removeLast: () => $.pop("items"),
+    }));
+    expect(removeLast()).toBe(3);
+    expect(value.items).toEqual([1, 2]);
+  });
+
+  it("should support $.pop from start", () => {
+    const { value, removeFirst } = store(($) => ({
+      items: [1, 2, 3] as number[],
+      removeFirst: () => $.pop("items", "start"),
+    }));
+    expect(removeFirst()).toBe(1);
+    expect(value.items).toEqual([2, 3]);
+  });
+
+  it("should support $.reset", () => {
+    const { value, increment, reset } = store(($) => ({
+      count: 0,
+      increment: () => $.set("count", $.count + 1),
+      reset: () => $.reset(),
+    }));
+    increment();
+    increment();
+    expect(value.count).toBe(2);
+    reset();
+    expect(value.count).toBe(0);
+  });
+
+  it("should support reading state via $", () => {
+    const { value, double } = store(($) => ({
+      count: 5,
+      double: () => $.set("count", $.count * 2),
+    }));
+    double();
+    expect(value.count).toBe(10);
+  });
+
+  it("should notify subscribers on action", () => {
+    const { subscribe, increment } = store(($) => ({
+      count: 0,
+      increment: () => $.set("count", $.count + 1),
+    }));
+    const callback = vi.fn();
+    subscribe(callback);
+    increment();
+    expect(callback).toHaveBeenCalledTimes(1);
+  });
+
+  it("should notify once per action even when multiple keys change", () => {
+    const { subscribe, swap } = store(($) => ({
+      a: 1,
+      b: 2,
+      swap: () => {
+        const temp = $.a;
+        $.set("a", $.b);
+        $.set("b", temp);
+      },
+    }));
+    const callback = vi.fn();
+    subscribe(callback);
+    swap();
+    expect(callback).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("createStore (factory pattern)", () => {
+  it("should return [useState, useActions] tuple", () => {
+    const result = createStore(($) => ({ count: 0 }));
+    expect(result).toHaveLength(2);
+    expect(typeof result[0]).toBe("function");
+    expect(typeof result[1]).toBe("function");
+  });
+
+  it("should return state from useState", () => {
+    const [useState] = createStore(($) => ({ count: 42 }));
+    expect(useState().count).toBe(42);
+  });
+
+  it("should return actions from useActions", () => {
+    const [useState, useActions] = createStore(($) => ({
+      count: 0,
+      increment: () => $.set("count", $.count + 1),
+    }));
+    const { increment } = useActions();
+    increment();
+    increment();
+    expect(useState().count).toBe(2);
+  });
+
+  it("should support subscribe on useState", () => {
+    const [useState, useActions] = createStore(($) => ({
+      count: 0,
+      increment: () => $.set("count", $.count + 1),
+    }));
+    const callback = vi.fn();
+    useState.subscribe(callback);
+    useActions().increment();
+    expect(callback).toHaveBeenCalledTimes(1);
+  });
+
+  it("should separate state and actions", () => {
+    const [useState, useActions] = createStore(($) => ({
+      items: [] as string[],
+      add: (item: string) => $.push("items", item),
+      remove: (item: string) => $.delete("items", (i: string) => i === item),
+    }));
+    const { add, remove } = useActions();
+
+    add("a");
+    add("b");
+    add("c");
+    expect(useState().items).toEqual(["a", "b", "c"]);
+
+    remove("b");
+    expect(useState().items).toEqual(["a", "c"]);
+  });
+});

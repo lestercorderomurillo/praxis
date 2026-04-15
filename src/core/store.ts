@@ -32,11 +32,21 @@ type Store<T> = {
 } & ActionsOf<T>;
 
 export const store = <T extends Record<string, any>>(
-  definition: T & ThisType<Widen<StateOf<T>> & StoreContext<Widen<StateOf<T>>>>,
+  definitionOrFactory: (T & ThisType<Widen<StateOf<T>> & StoreContext<Widen<StateOf<T>>>>) | (($: StoreContext<any> & Record<string, any>) => T),
   options?: any,
 ): Store<T> => {
   const state: Record<string, any> = {};
   const actions: Record<string, Function> = {};
+
+  let realProxy: any = null;
+  const deferred = new Proxy({} as any, {
+    get(_, prop) { return realProxy[prop]; },
+    set(_, prop, value) { realProxy[prop] = value; return true; },
+  });
+
+  const definition = typeof definitionOrFactory === "function"
+    ? (definitionOrFactory as Function)(deferred)
+    : definitionOrFactory;
 
   for (const [key, value] of Object.entries(definition)) {
     if (typeof value === "function") {
@@ -102,6 +112,8 @@ export const store = <T extends Record<string, any>>(
       return true;
     },
   });
+
+  realProxy = proxy;
 
   const instance: Record<string, any> = {
     get value() {
