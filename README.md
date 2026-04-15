@@ -25,15 +25,9 @@ const [useBooks, useBookActions] = createStore({
     { id: 3, title: "Fahrenheit 451", author: "Ray Bradbury", year: 1953 },
   ] as Book[],
 
-  addBook(book: Book) {
-    this.push("books", book);
-  },
-  removeBook(id: number) {
-    this.delete("books", (b) => b.id === id);
-  },
-  resetBooks() {
-    this.reset();
-  },
+  addBook(book: Book) { this.push("books", book); },
+  removeBook(id: number) { this.delete("books", (b) => b.id === id); },
+  resetBooks() { this.reset(); },
 });
 
 function App() {
