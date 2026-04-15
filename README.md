@@ -16,16 +16,14 @@ yarn add praxis
 import { createStore } from "praxis";
 import { View, Text, FlatList, Pressable } from "react-native";
 
-type Book = { id: number; title: string; author: string; year: number };
-
 const useBooks = createStore(({ push, remove, reset }) => ({
   books: [
     { id: 1, title: "1984", author: "George Orwell", year: 1949 },
     { id: 2, title: "Brave New World", author: "Aldous Huxley", year: 1932 },
     { id: 3, title: "Fahrenheit 451", author: "Ray Bradbury", year: 1953 },
-  ] as Book[],
+  ],
 
-  addBook: (book: Book) => push("books", book),
+  addBook: (book) => push("books", book),
   removeBook: (id: number) => remove("books", (b) => b.id === id),
   resetBooks: () => reset(),
 }));
