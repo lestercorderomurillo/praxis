@@ -1,6 +1,6 @@
 # praxis
 
-![Version](https://img.shields.io/badge/Version-0.4.0-blue) ![CI](https://img.shields.io/badge/CI-passing-brightgreen) ![Tests](https://img.shields.io/badge/Tests-64_passing-brightgreen) ![License](https://img.shields.io/badge/License-MIT-blue)
+![Version](https://img.shields.io/badge/Version-0.5.0-blue) ![CI](https://img.shields.io/badge/CI-passing-brightgreen) ![Tests](https://img.shields.io/badge/Tests-64_passing-brightgreen) ![License](https://img.shields.io/badge/License-MIT-blue)
 
 Reactive data layer for TypeScript and React Native. Praxis keeps your frontend in sync with your backend — define your state once, wire up actions that talk to your API, and let the UI reflect reality.
 
@@ -18,7 +18,7 @@ import { View, Text, FlatList, Pressable } from "react-native";
 
 type Book = { id: number; title: string; author: string; year: number };
 
-const [useBooks, useBookActions] = createStore(({ push, remove, reset }) => ({
+const useBooks = createStore(({ push, remove, reset }) => ({
   books: [
     { id: 1, title: "1984", author: "George Orwell", year: 1949 },
     { id: 2, title: "Brave New World", author: "Aldous Huxley", year: 1932 },
@@ -31,8 +31,7 @@ const [useBooks, useBookActions] = createStore(({ push, remove, reset }) => ({
 }));
 
 function App() {
-  const { books } = useBooks();
-  const { removeBook, resetBooks } = useBookActions();
+  const { books, removeBook, resetBooks } = useBooks();
 
   return (
     <View>
@@ -59,33 +58,10 @@ function App() {
 
 ## `createStore(definition)`
 
-Define state and actions in a single object. Returns a `[useState, useActions]` tuple.
+Define state and actions in a single object. Returns a hook that gives you both state and actions.
 
 - **State** — any non-function property becomes reactive state.
 - **Actions** — any function property becomes an action. Destructure the utility methods you need from the factory parameter.
-
-### Reading state
-
-```tsx
-function BookCount() {
-  const { books } = useBooks();
-  return <Text>{books.length} books</Text>;
-}
-```
-
-### Dispatching actions
-
-```tsx
-function AddBookButton() {
-  const { addBook } = useBookActions();
-
-  return (
-    <Pressable onPress={() => addBook({ id: 4, title: "Do Androids Dream of Electric Sheep?", author: "Philip K. Dick", year: 1968 })}>
-      <Text>Add book</Text>
-    </Pressable>
-  );
-}
-```
 
 ## Fluent API
 

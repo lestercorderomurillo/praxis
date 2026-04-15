@@ -410,55 +410,53 @@ describe("store", () => {
 });
 
 describe("createStore", () => {
-  it("should return [useState, useActions] tuple", () => {
-    const result = createStore({ count: 0 });
-    expect(result).toHaveLength(2);
-    expect(typeof result[0]).toBe("function");
-    expect(typeof result[1]).toBe("function");
+  it("should return a hook function", () => {
+    const useStore = createStore({ count: 0 });
+    expect(typeof useStore).toBe("function");
   });
 
-  it("should return state from useState", () => {
-    const [useState] = createStore({ count: 42 });
-    expect(useState().count).toBe(42);
+  it("should return state from hook", () => {
+    const useStore = createStore({ count: 42 });
+    expect(useStore().count).toBe(42);
   });
 
-  it("should return actions from useActions", () => {
-    const [useState, useActions] = createStore({
+  it("should return actions from hook", () => {
+    const useStore = createStore({
       count: 0,
       increment() { this.set("count", this.count + 1); },
     });
-    const { increment } = useActions();
+    const { increment } = useStore();
     increment();
     increment();
-    expect(useState().count).toBe(2);
+    expect(useStore().count).toBe(2);
   });
 
-  it("should support subscribe on useState", () => {
-    const [useState, useActions] = createStore({
+  it("should support subscribe on hook", () => {
+    const useStore = createStore({
       count: 0,
       increment() { this.set("count", this.count + 1); },
     });
     const callback = vi.fn();
-    useState.subscribe(callback);
-    useActions().increment();
+    useStore.subscribe(callback);
+    useStore().increment();
     expect(callback).toHaveBeenCalledTimes(1);
   });
 
-  it("should separate state and actions", () => {
-    const [useState, useActions] = createStore({
+  it("should return state and actions together", () => {
+    const useStore = createStore({
       items: [] as string[],
       add(item: string) { this.push("items", item); },
       remove(item: string) { this.remove("items", (i: string) => i === item); },
     });
-    const { add, remove } = useActions();
+    const { add, remove } = useStore();
 
     add("a");
     add("b");
     add("c");
-    expect(useState().items).toEqual(["a", "b", "c"]);
+    expect(useStore().items).toEqual(["a", "b", "c"]);
 
     remove("b");
-    expect(useState().items).toEqual(["a", "c"]);
+    expect(useStore().items).toEqual(["a", "c"]);
   });
 });
 
@@ -599,54 +597,52 @@ describe("store (factory pattern)", () => {
 });
 
 describe("createStore (factory pattern)", () => {
-  it("should return [useState, useActions] tuple", () => {
-    const result = createStore(($) => ({ count: 0 }));
-    expect(result).toHaveLength(2);
-    expect(typeof result[0]).toBe("function");
-    expect(typeof result[1]).toBe("function");
+  it("should return a hook function", () => {
+    const useStore = createStore(($) => ({ count: 0 }));
+    expect(typeof useStore).toBe("function");
   });
 
-  it("should return state from useState", () => {
-    const [useState] = createStore(($) => ({ count: 42 }));
-    expect(useState().count).toBe(42);
+  it("should return state from hook", () => {
+    const useStore = createStore(($) => ({ count: 42 }));
+    expect(useStore().count).toBe(42);
   });
 
-  it("should return actions from useActions", () => {
-    const [useState, useActions] = createStore(($) => ({
+  it("should return actions from hook", () => {
+    const useStore = createStore(($) => ({
       count: 0,
       increment: () => $.set("count", $.count + 1),
     }));
-    const { increment } = useActions();
+    const { increment } = useStore();
     increment();
     increment();
-    expect(useState().count).toBe(2);
+    expect(useStore().count).toBe(2);
   });
 
-  it("should support subscribe on useState", () => {
-    const [useState, useActions] = createStore(($) => ({
+  it("should support subscribe on hook", () => {
+    const useStore = createStore(($) => ({
       count: 0,
       increment: () => $.set("count", $.count + 1),
     }));
     const callback = vi.fn();
-    useState.subscribe(callback);
-    useActions().increment();
+    useStore.subscribe(callback);
+    useStore().increment();
     expect(callback).toHaveBeenCalledTimes(1);
   });
 
-  it("should separate state and actions", () => {
-    const [useState, useActions] = createStore(($) => ({
+  it("should return state and actions together", () => {
+    const useStore = createStore(($) => ({
       items: [] as string[],
       add: (item: string) => $.push("items", item),
       remove: (item: string) => $.remove("items", (i: string) => i === item),
     }));
-    const { add, remove } = useActions();
+    const { add, remove } = useStore();
 
     add("a");
     add("b");
     add("c");
-    expect(useState().items).toEqual(["a", "b", "c"]);
+    expect(useStore().items).toEqual(["a", "b", "c"]);
 
     remove("b");
-    expect(useState().items).toEqual(["a", "c"]);
+    expect(useStore().items).toEqual(["a", "c"]);
   });
 });
