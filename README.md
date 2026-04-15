@@ -25,20 +25,20 @@ const [useBooks, useBookActions] = createStore({
     { id: 3, title: "Fahrenheit 451", author: "Ray Bradbury", year: 1953 },
   ] as Book[],
 
-  add(book: Book) {
+  addBook(book: Book) {
     this.push("books", book);
   },
-  remove(id: number) {
+  removeBook(id: number) {
     this.delete("books", (b) => b.id === id);
   },
-  reset() {
+  resetBooks() {
     this.reset();
   },
 });
 
 function App() {
   const { books } = useBooks();
-  const { remove, reset } = useBookActions();
+  const { removeBook, resetBooks } = useBookActions();
 
   return (
     <View>
@@ -49,13 +49,13 @@ function App() {
         renderItem={({ item: book }) => (
           <View>
             <Text>{book.title} by {book.author}, {book.year}</Text>
-            <Pressable onPress={() => remove(book.id)}>
+            <Pressable onPress={() => removeBook(book.id)}>
               <Text>Remove</Text>
             </Pressable>
           </View>
         )}
       />
-      <Pressable onPress={reset}>
+      <Pressable onPress={resetBooks}>
         <Text>Reset</Text>
       </Pressable>
     </View>
@@ -83,10 +83,10 @@ function BookCount() {
 
 ```tsx
 function AddBookButton() {
-  const { add } = useBookActions();
+  const { addBook } = useBookActions();
 
   return (
-    <Pressable onPress={() => add({ id: 4, title: "Do Androids Dream of Electric Sheep?", author: "Philip K. Dick", year: 1968 })}>
+    <Pressable onPress={() => addBook({ id: 4, title: "Do Androids Dream of Electric Sheep?", author: "Philip K. Dick", year: 1968 })}>
       <Text>Add book</Text>
     </Pressable>
   );
