@@ -17,8 +17,8 @@ export type StoreContext<S> = {
   set<K extends keyof S>(key: K, value: S[K]): void;
   get(): S;
   get<K extends keyof S>(key: K): S[K];
-  delete<K extends keyof S>(key: K): void;
-  delete<K extends ArrayKeys<S>>(key: K, predicate: (item: ElementOf<S[K]>) => boolean): void;
+  remove<K extends keyof S>(key: K): void;
+  remove<K extends ArrayKeys<S>>(key: K, predicate: (item: ElementOf<S[K]>) => boolean): void;
   push<K extends ArrayKeys<S>>(key: K, ...items: ElementOf<S[K]>[]): void;
   push<K extends ArrayKeys<S>>(key: K, position: "start" | "end", ...items: ElementOf<S[K]>[]): void;
   pop<K extends ArrayKeys<S>>(key: K): ElementOf<S[K]>;
@@ -69,7 +69,7 @@ export const store = <T extends Record<string, any>>(
       return state;
     },
 
-    delete(key: string, predicate?: (item: any) => boolean) {
+    remove(key: string, predicate?: (item: any) => boolean) {
       if (predicate) {
         state[key] = state[key].filter((item: any) => !predicate(item));
       } else {

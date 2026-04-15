@@ -34,19 +34,19 @@ describe("store", () => {
     expect(sum()).toBe(3);
   });
 
-  it("should support this.delete on a key", () => {
+  it("should support this.remove on a key", () => {
     const { value, clear } = store({
       temp: "hello" as string | undefined,
-      clear() { this.delete("temp"); },
+      clear() { this.remove("temp"); },
     });
     clear();
     expect(value.temp).toBeUndefined();
   });
 
-  it("should support this.delete with predicate on arrays", () => {
+  it("should support this.remove with predicate on arrays", () => {
     const { value, remove } = store({
       items: [1, 2, 3] as number[],
-      remove(n: number) { this.delete("items", (i: number) => i === n); },
+      remove(n: number) { this.remove("items", (i: number) => i === n); },
     });
     remove(2);
     expect(value.items).toEqual([1, 3]);
@@ -310,10 +310,10 @@ describe("store", () => {
     expect(value.items).toEqual([1, 2, 3]);
   });
 
-  it("should handle delete filtering multiple items at once", () => {
+  it("should handle remove filtering multiple items at once", () => {
     const { value, removeEvens } = store({
       nums: [1, 2, 3, 4, 5, 6, 7, 8] as number[],
-      removeEvens() { this.delete("nums", (n: number) => n % 2 === 0); },
+      removeEvens() { this.remove("nums", (n: number) => n % 2 === 0); },
     });
     removeEvens();
     expect(value.nums).toEqual([1, 3, 5, 7]);
@@ -333,7 +333,7 @@ describe("store", () => {
         if (todo) todo.done = !todo.done;
       },
       removeDone() {
-        this.delete("todos", (t: Todo) => t.done);
+        this.remove("todos", (t: Todo) => t.done);
       },
       reset() { this.reset(); },
     });
@@ -448,7 +448,7 @@ describe("createStore", () => {
     const [useState, useActions] = createStore({
       items: [] as string[],
       add(item: string) { this.push("items", item); },
-      remove(item: string) { this.delete("items", (i: string) => i === item); },
+      remove(item: string) { this.remove("items", (i: string) => i === item); },
     });
     const { add, remove } = useActions();
 
@@ -494,19 +494,19 @@ describe("store (factory pattern)", () => {
     expect(sum()).toBe(3);
   });
 
-  it("should support $.delete on a key", () => {
+  it("should support $.remove on a key", () => {
     const { value, clear } = store(($) => ({
       temp: "hello" as string | undefined,
-      clear: () => $.delete("temp"),
+      clear: () => $.remove("temp"),
     }));
     clear();
     expect(value.temp).toBeUndefined();
   });
 
-  it("should support $.delete with predicate on arrays", () => {
+  it("should support $.remove with predicate on arrays", () => {
     const { value, remove } = store(($) => ({
       items: [1, 2, 3] as number[],
-      remove: (n: number) => $.delete("items", (i: number) => i === n),
+      remove: (n: number) => $.remove("items", (i: number) => i === n),
     }));
     remove(2);
     expect(value.items).toEqual([1, 3]);
@@ -637,7 +637,7 @@ describe("createStore (factory pattern)", () => {
     const [useState, useActions] = createStore(($) => ({
       items: [] as string[],
       add: (item: string) => $.push("items", item),
-      remove: (item: string) => $.delete("items", (i: string) => i === item),
+      remove: (item: string) => $.remove("items", (i: string) => i === item),
     }));
     const { add, remove } = useActions();
 
