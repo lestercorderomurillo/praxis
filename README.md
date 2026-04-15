@@ -2,7 +2,7 @@
 
 ![CI](https://img.shields.io/badge/CI-passing-brightgreen) ![Tests](https://img.shields.io/badge/Tests-45_passing-brightgreen) ![License](https://img.shields.io/badge/License-MIT-blue)
 
-Lightweight reactive state management for TypeScript.
+Reactive data layer for TypeScript and React. Praxis keeps your frontend in sync with your backend — define your state once, wire up actions that talk to your API, and let the UI reflect reality.
 
 ## Install
 
@@ -10,249 +10,174 @@ Lightweight reactive state management for TypeScript.
 yarn add praxis
 ```
 
-## API
+## Quick start
 
-### `signal<T>(initialValue)`
+```tsx
+import { createStore } from "praxis";
 
-Creates a reactive value with automatic subscriber notifications.
+type Book = { id: number; title: string; author: string; year: number };
 
-```ts
-import { signal } from "praxis/core/signal";
+const [useBooks, useBookActions] = createStore({
+  books: [] as Book[],
 
-const counter = signal(0);
-
-// Read
-console.log(counter.value); // 0
-
-// Write (notifies all subscribers)
-counter.value = 5;
-
-// Subscribe to changes
-const unsubscribe = counter.subscribe(() => {
-  console.log("counter changed:", counter.value);
+  async load() {
+    const res = await fetch("/api/books");
+    this.set("books", await res.json());
+  },
+  add(book: Book) {
+    this.push("books", book);
+  },
+  remove(id: number) {
+    this.delete("books", (b) => b.id === id);
+  },
 });
 
-counter.value = 10; // logs: "counter changed: 10"
+function BookList() {
+  const { books } = useBooks();
+  const { load, remove } = useBookActions();
 
-unsubscribe();
-counter.value = 20; // no log
+  useEffect(() => { load(); }, []);
+
+  return (
+    <ul>
+      {books.map((book) => (
+        <li key={book.id}>
+          {book.title} — {book.author} ({book.year})
+          <button onClick={() => remove(book.id)}>Remove</button>
+        </li>
+      ))}
+    </ul>
+  );
+}
 ```
 
-### `watch(fn)`
+## `createStore(definition)`
 
-Creates an effect that auto-tracks signal dependencies and re-runs when they change.
+Define state and actions in a single object. Returns a `[useState, useActions]` tuple.
 
-```ts
-import { signal, watch } from "praxis/core/signal";
-
-const firstName = signal("John");
-const lastName = signal("Doe");
-
-// Runs immediately, then re-runs whenever firstName or lastName change
-watch(() => {
-  console.log(`${firstName.value} ${lastName.value}`);
-});
-// logs: "John Doe"
-
-firstName.value = "Jane";
-// logs: "Jane Doe"
-```
-
-Stop watching from the outside:
+- **State** — any non-function property becomes reactive state.
+- **Actions** — any function property becomes an action. Actions access state through `this` and can call context methods to mutate it.
 
 ```ts
-const watcher = watch(() => {
-  console.log(counter.value);
-});
-
-watcher.stop();
-```
-
-Or stop from the inside:
-
-```ts
-watch((self) => {
-  console.log(counter.value);
-  if (counter.value >= 10) {
-    self.stop();
-  }
-});
-```
-
-### `store(definition)`
-
-Creates a reactive store. State fields and action methods are defined together in a single object. Actions have access to the full state via `this` and a set of built-in context methods.
-
-```ts
-import { store } from "praxis";
-
-const counter = store({
+const [useBooks, useBookActions] = createStore({
   // State
-  count: 0,
+  books: [
+    { id: 1, title: "1984", author: "George Orwell", year: 1949 },
+    { id: 2, title: "Brave New World", author: "Aldous Huxley", year: 1932 },
+    { id: 3, title: "Fahrenheit 451", author: "Ray Bradbury", year: 1953 },
+  ] as Book[],
+  filter: "" as string,
 
   // Actions
-  increment() {
-    this.set("count", this.count + 1);
+  add(book: Book) {
+    this.push("books", book);
   },
-  decrement() {
-    this.set("count", this.count - 1);
+  remove(id: number) {
+    this.delete("books", (b) => b.id === id);
+  },
+  setFilter(query: string) {
+    this.set("filter", query);
   },
   reset() {
     this.reset();
   },
 });
-
-counter.increment();
-counter.increment();
-console.log(counter.value.count); // 2
-
-counter.reset();
-console.log(counter.value.count); // 0
 ```
 
-#### Store context methods
+### Reading state
 
-Inside actions, `this` gives you access to both the current state and these methods:
+```tsx
+function BookCount() {
+  const { books } = useBooks();
+  return <span>{books.length} books</span>;
+}
+```
+
+### Dispatching actions
+
+```tsx
+function AddBookForm() {
+  const { add } = useBookActions();
+
+  return (
+    <button onClick={() => add({ id: 4, title: "Do Androids Dream of Electric Sheep?", author: "Philip K. Dick", year: 1968 })}>
+      Add book
+    </button>
+  );
+}
+```
+
+### Subscribing to changes
+
+```ts
+useBooks.subscribe(() => {
+  console.log("books changed:", useBooks());
+});
+```
+
+Subscribers fire once per action, even when multiple fields change inside a single action.
+
+## Context methods
+
+Inside actions, `this` gives you the current state plus these methods:
 
 | Method | Description |
 |--------|-------------|
-| `this.set(key, value)` | Set a state field |
-| `this.get()` | Get entire state |
+| `this.set(key, value)` | Set a field |
+| `this.get()` | Get full state |
 | `this.get(key)` | Get a single field |
-| `this.delete(key)` | Delete a state field |
+| `this.delete(key)` | Delete a field |
 | `this.delete(key, predicate)` | Remove array items matching predicate |
-| `this.push(key, ...items)` | Append items to an array |
-| `this.push(key, "start", ...items)` | Prepend items to an array |
+| `this.push(key, ...items)` | Append to an array |
+| `this.push(key, "start", ...items)` | Prepend to an array |
 | `this.pop(key)` | Remove and return last item |
 | `this.pop(key, "start")` | Remove and return first item |
 | `this.reset()` | Reset all state to initial values |
 
-#### Subscribing to store changes
+## Full example
 
-```ts
-const { subscribe, increment } = store({
-  count: 0,
-  increment() { this.set("count", this.count + 1); },
-});
-
-const unsubscribe = subscribe(() => {
-  console.log("store updated");
-});
-
-increment(); // logs: "store updated"
-unsubscribe();
-```
-
-Subscribers are notified once per action, even if multiple fields change inside a single action.
-
-### `createStore(definition)`
-
-Factory that returns a `[useState, useActions]` tuple, separating state reads from mutations.
-
-```ts
+```tsx
 import { createStore } from "praxis";
 
-const [useState, useActions] = createStore({
-  todos: [] as Todo[],
-  nextId: 1,
+type Book = { id: number; title: string; author: string; year: number };
 
-  add(text: string) {
-    this.push("todos", { id: this.nextId, text, done: false });
-    this.set("nextId", this.nextId + 1);
+const [useBooks, useBookActions] = createStore({
+  books: [
+    { id: 1, title: "1984", author: "George Orwell", year: 1949 },
+    { id: 2, title: "Brave New World", author: "Aldous Huxley", year: 1932 },
+    { id: 3, title: "Fahrenheit 451", author: "Ray Bradbury", year: 1953 },
+  ] as Book[],
+
+  add(book: Book) {
+    this.push("books", book);
   },
-  toggle(id: number) {
-    const todo = this.todos.find(t => t.id === id);
-    if (todo) todo.done = !todo.done;
-  },
-  removeDone() {
-    this.delete("todos", t => t.done);
+  remove(id: number) {
+    this.delete("books", (b) => b.id === id);
   },
   reset() {
     this.reset();
   },
 });
 
-// Read state
-const state = useState();
-console.log(state.todos);
+function App() {
+  const { books } = useBooks();
+  const { remove, reset } = useBookActions();
 
-// Dispatch actions
-const { add, toggle, removeDone } = useActions();
-add("Buy milk");
-add("Write tests");
-toggle(1);
-removeDone();
-
-// Subscribe to changes
-useState.subscribe(() => {
-  console.log("state changed:", useState());
-});
-```
-
-## Examples
-
-### State machine
-
-```ts
-const machine = store({
-  state: "idle" as "idle" | "loading" | "success" | "error",
-  data: null as string | null,
-  error: null as string | null,
-
-  load() {
-    this.set("state", "loading");
-    this.set("data", null);
-    this.set("error", null);
-  },
-  succeed(data: string) {
-    this.set("state", "success");
-    this.set("data", data);
-  },
-  fail(error: string) {
-    this.set("state", "error");
-    this.set("error", error);
-  },
-  reset() { this.reset(); },
-});
-
-machine.load();
-machine.succeed("payload");
-console.log(machine.value.state); // "success"
-console.log(machine.value.data);  // "payload"
-```
-
-### FIFO queue
-
-```ts
-const queue = store({
-  items: [] as number[],
-  enqueue(n: number) { this.push("items", "start", n); },
-  dequeue() { return this.pop("items"); },
-});
-
-queue.enqueue(1);
-queue.enqueue(2);
-queue.enqueue(3);
-console.log(queue.dequeue()); // 1
-console.log(queue.dequeue()); // 2
-```
-
-### Transfer between arrays
-
-```ts
-const { value, transfer } = store({
-  source: [1, 2, 3, 4, 5] as number[],
-  destination: [] as number[],
-  transfer(predicate: (n: number) => boolean) {
-    const moving = this.source.filter(predicate);
-    this.set("source", this.source.filter(n => !predicate(n)));
-    this.set("destination", [...this.destination, ...moving]);
-  },
-});
-
-transfer(n => n > 3);
-console.log(value.source);      // [1, 2, 3]
-console.log(value.destination); // [4, 5]
+  return (
+    <div>
+      <h1>Library ({books.length})</h1>
+      <ul>
+        {books.map((book) => (
+          <li key={book.id}>
+            <strong>{book.title}</strong> by {book.author}, {book.year}
+            <button onClick={() => remove(book.id)}>x</button>
+          </li>
+        ))}
+      </ul>
+      <button onClick={reset}>Reset</button>
+    </div>
+  );
+}
 ```
 
 ## License
