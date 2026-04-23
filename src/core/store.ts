@@ -24,6 +24,7 @@ export type StoreContext<S> = {
   pop<K extends ArrayKeys<S>>(key: K): ElementOf<S[K]>;
   pop<K extends ArrayKeys<S>>(key: K, position: "start" | "end"): ElementOf<S[K]>;
   reset(): void;
+  optimistic(mutation: (opts: { isDraft: boolean }) => void, promise: Promise<any>): Promise<void>;
 };
 
 type Store<T> = {
@@ -59,7 +60,7 @@ export const store = <T extends Record<string, any>>(
   const initialState = structuredClone(state);
   const reactive = signal(state);
 
-  const context: Record<string, (key: string, ...args: any[]) => any> = {
+  const context: Record<string, Function> = {
     set(key: string, value: any) {
       state[key] = value;
     },
@@ -99,6 +100,25 @@ export const store = <T extends Record<string, any>>(
         delete state[key];
       }
       Object.assign(state, structuredClone(initialState));
+    },
+
+    optimistic(mutation: (opts: { isDraft: boolean }) => void, promise: Promise<any>) {
+      const snapshot = structuredClone(state);
+      mutation({ isDraft: true });
+
+      return promise.then(
+        () => {
+          for (const key of Object.keys(state)) delete state[key];
+          Object.assign(state, snapshot);
+          mutation({ isDraft: false });
+          reactive.value = reactive.value;
+        },
+        () => {
+          for (const key of Object.keys(state)) delete state[key];
+          Object.assign(state, snapshot);
+          reactive.value = reactive.value;
+        },
+      );
     },
   };
 

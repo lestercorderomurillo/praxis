@@ -596,6 +596,99 @@ describe("store (factory pattern)", () => {
   });
 });
 
+describe("optimistic", () => {
+  it("should apply optimistic update immediately with isDraft true", () => {
+    const { value, addItem } = store(($) => ({
+      items: [] as { name: string; isLoading: boolean }[],
+      addItem: (name: string) =>
+        $.optimistic(
+          ({ isDraft }) => $.push("items", { name, isLoading: isDraft }),
+          Promise.resolve(),
+        ),
+    }));
+    addItem("book");
+    expect(value.items).toEqual([{ name: "book", isLoading: true }]);
+  });
+
+  it("should finalize with isDraft false on success", async () => {
+    const { value, addItem } = store(($) => ({
+      items: [] as { name: string; isLoading: boolean }[],
+      addItem: (name: string) =>
+        $.optimistic(
+          ({ isDraft }) => $.push("items", { name, isLoading: isDraft }),
+          Promise.resolve(),
+        ),
+    }));
+    await addItem("book");
+    expect(value.items).toEqual([{ name: "book", isLoading: false }]);
+  });
+
+  it("should rollback on failure", async () => {
+    const { value, addItem } = store(($) => ({
+      items: ["existing"] as string[],
+      addItem: (name: string) =>
+        $.optimistic(
+          ({ isDraft }) => $.push("items", name),
+          Promise.reject(new Error("fail")),
+        ),
+    }));
+    await addItem("new").catch(() => {});
+    expect(value.items).toEqual(["existing"]);
+  });
+
+  it("should notify subscribers on optimistic update and on settle", async () => {
+    const { subscribe, addItem } = store(($) => ({
+      items: [] as string[],
+      addItem: (name: string) =>
+        $.optimistic(
+          ({ isDraft }) => $.push("items", name),
+          Promise.resolve(),
+        ),
+    }));
+    const callback = vi.fn();
+    subscribe(callback);
+    const p = addItem("book");
+    expect(callback).toHaveBeenCalledTimes(1);
+    await p;
+    expect(callback).toHaveBeenCalledTimes(2);
+  });
+
+  it("should restore original state before reapplying on success", async () => {
+    const { value, addItem } = store(($) => ({
+      items: [{ id: 1, status: "saved" }] as { id: number; status: string }[],
+      addItem: (id: number) =>
+        $.optimistic(
+          ({ isDraft }) => $.push("items", { id, status: isDraft ? "pending" : "saved" }),
+          Promise.resolve(),
+        ),
+    }));
+    await addItem(2);
+    expect(value.items).toEqual([
+      { id: 1, status: "saved" },
+      { id: 2, status: "saved" },
+    ]);
+  });
+
+  it("should work with the this pattern", async () => {
+    const { value, addItem } = store({
+      items: [] as { name: string; isLoading: boolean }[],
+      addItem(name: string) {
+        return this.optimistic(
+          ({ isDraft }: { isDraft: boolean }) => this.push("items", { name, isLoading: isDraft }),
+          Promise.resolve(),
+        );
+      },
+    });
+    addItem("book");
+    expect(value.items).toEqual([{ name: "book", isLoading: true }]);
+    await addItem("another");
+    expect(value.items).toEqual([
+      { name: "book", isLoading: true },
+      { name: "another", isLoading: false },
+    ]);
+  });
+});
+
 describe("createStore (factory pattern)", () => {
   it("should return a hook function", () => {
     const useStore = createStore(($) => ({ count: 0 }));

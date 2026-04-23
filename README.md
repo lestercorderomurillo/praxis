@@ -1,8 +1,20 @@
-# praxis
+# P R A X I S
 
 ![Version](https://img.shields.io/badge/Version-0.5.0-blue) ![CI](https://img.shields.io/badge/CI-passing-brightgreen) ![Tests](https://img.shields.io/badge/Tests-64_passing-brightgreen) ![License](https://img.shields.io/badge/License-MIT-blue)
 
-Reactive data layer for TypeScript and React Native. Praxis keeps your frontend in sync with your backend — define your state once, wire up actions that talk to your API, and let the UI reflect reality.
+Praxis keeps your frontend in sync with your backend — define your state once, wire up actions that talk to your API, and let the UI reflect reality.
+
+## Key features
+
+- **Optimistic updates** — first-class primitive for writing UI that responds before the network does, with automatic rollback on failure.
+
+- **Signal-based reactivity** — fine-grained updates, no providers, no context, no re-render storms.
+
+- **Centralized state** — predictable global stores you can reach from anywhere, with mutations as the single source of change.
+
+- **Hook-ready syntax** — every store is a hook, drop it straight into a component and destructure what you need.
+
+- **Type-safe by design** — full typescript support.
 
 ## Install
 
@@ -12,24 +24,51 @@ yarn add praxis
 
 ## Quick Start
 
+Call `createStore` with a factory that returns your initial state and actions. 
+
+Every function property becomes an action, everything else becomes reactive state, simple.
+
 ```tsx
 import { createStore } from "praxis/react";
-import { View, Text, FlatList, Pressable } from "react-native";
 
-const useBooks = createStore(({ push, remove, reset }) => ({
+type Book = {
+  id: number;
+  title: string;
+  author: string;
+  year: number;
+};
+
+const useBooks = createStore(({ push, remove, reset, optimistic }) => ({
   books: [
     { id: 1, title: "1984", author: "George Orwell", year: 1949 },
     { id: 2, title: "Brave New World", author: "Aldous Huxley", year: 1932 },
     { id: 3, title: "Fahrenheit 451", author: "Ray Bradbury", year: 1953 },
-  ],
+  ] as Book[],
 
-  addBook: (book) => push("books", book),
+  addBook: (book: Omit<Book, "id">) =>
+    optimistic(
+      ({ isDraft }) => push("books", { ...book, id: Date.now(), isLoading: isDraft }),
+      fetch("https://api.example.com/books", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(book),
+      }),
+    ),
   removeBook: (id: number) => remove("books", (b) => b.id === id),
   resetBooks: () => reset(),
 }));
+```
 
-function App() {
-  const { books, removeBook, resetBooks } = useBooks();
+### Using the hook in components
+
+Drop the hook into any component and destructure the slices you care about. Mutations update global state and the UI tracks the change automatically.
+
+```tsx
+import { View, Text, FlatList, Pressable } from "react-native";
+import { useBooks } from "./useBooks";
+
+function Library() {
+  const { books, addBook, removeBook, resetBooks } = useBooks();
 
   return (
     <View>
@@ -46,6 +85,13 @@ function App() {
           </View>
         )}
       />
+      <Pressable
+        onPress={() =>
+          addBook({ title: "New Book", author: "New Author", year: 2026 })
+        }
+      >
+        <Text>Add Book</Text>
+      </Pressable>
       <Pressable onPress={resetBooks}>
         <Text>Reset</Text>
       </Pressable>
@@ -54,16 +100,16 @@ function App() {
 }
 ```
 
-## `createStore(definition)`
+## API reference
 
-Define state and actions in a single object. Returns a hook that gives you both state and actions.
+### `createStore(factory)`
+
+Define state and actions in a single object. Returns a hook that gives you both.
 
 - **State** — any non-function property becomes reactive state.
-- **Actions** — any function property becomes an action. Destructure the utility methods you need from the factory parameter.
+- **Actions** — any function property becomes an action. Destructure the helpers you need from the factory parameter.
 
-## Fluent API
-
-Destructure the methods you need from the factory parameter:
+### Helpers
 
 | | |
 |---|---|
@@ -77,3 +123,4 @@ Destructure the methods you need from the factory parameter:
 | `pop(key)` | Remove and return the last item |
 | `pop(key, "start")` | Remove and return the first item |
 | `reset()` | Reset all state to initial values |
+| `optimistic(mutation, promise)` | Apply mutation optimistically; finalize on resolve, rollback on reject |
