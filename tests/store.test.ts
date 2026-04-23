@@ -716,6 +716,13 @@ describe("optimistic", () => {
     expect(value.books[0].id).toBe(999);
   });
 
+  it("should generate a v4-style uuid", () => {
+    const { uuid } = store(($) => ({ uuid: () => $.uuid() }));
+    const id = uuid();
+    expect(id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+    expect(uuid()).not.toBe(id);
+  });
+
   it("should rollback without invoking draft on rejection", async () => {
     const { value, addBook } = store(($) => ({
       books: [] as { id: number; title: string }[],

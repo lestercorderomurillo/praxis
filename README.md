@@ -38,7 +38,7 @@ type Book = {
   year: number;
 };
 
-const useBooks = createStore(({ push, remove, reset, optimistic }) => ({
+const useBooks = createStore(({ push, remove, reset, optimistic, uuid }) => ({
   books: [
     { id: "1", title: "1984", author: "George Orwell", year: 1949 },
     { id: "2", title: "Brave New World", author: "Aldous Huxley", year: 1932 },
@@ -50,7 +50,7 @@ const useBooks = createStore(({ push, remove, reset, optimistic }) => ({
       ({ isDraft, draft }) =>
         push("books", {
           ...book,
-          id: draft("id", `tmp-${Date.now()}`),
+          id: draft("id", uuid()),
           isLoading: isDraft,
         }),
       fetch("https://api.example.com/books", {
@@ -128,6 +128,7 @@ Define state and actions in a single object. Returns a hook that gives you both.
 | `pop(key)` | Remove and return the last item |
 | `pop(key, "start")` | Remove and return the first item |
 | `reset()` | Reset all state to initial values |
+| `uuid()` | Generate a v4 UUID (uses `crypto.randomUUID` when available) |
 | `optimistic(mutation, promise)` | Apply mutation optimistically; finalize on resolve, rollback on reject |
 
 The mutation runs twice: once with `isDraft: true` for the immediate UI update, then again with `isDraft: false` once the promise resolves. Use `draft(key, fallback)` inside the mutation to swap a placeholder value for the real one from the response — `draft` returns the fallback during the optimistic pass and pulls `key` from the resolved value on finalize.
