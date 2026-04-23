@@ -687,6 +687,47 @@ describe("optimistic", () => {
       { name: "another", isLoading: false },
     ]);
   });
+
+  it("should substitute draft values from resolved response on finalize", async () => {
+    const { value, addBook } = store(($) => ({
+      books: [] as { id: string | number; title: string }[],
+      addBook: (title: string) =>
+        $.optimistic(
+          ({ draft }) => $.push("books", { id: draft("id", Date.now()), title }),
+          Promise.resolve({ id: "real-uuid-123", title }),
+        ),
+    }));
+    const p = addBook("1984");
+    expect(typeof value.books[0].id).toBe("number");
+    await p;
+    expect(value.books[0].id).toBe("real-uuid-123");
+  });
+
+  it("should keep draft fallback when key is absent from response", async () => {
+    const { value, addBook } = store(($) => ({
+      books: [] as { id: number; title: string }[],
+      addBook: (title: string) =>
+        $.optimistic(
+          ({ draft }) => $.push("books", { id: draft("id", 999), title }),
+          Promise.resolve({ title }),
+        ),
+    }));
+    await addBook("1984");
+    expect(value.books[0].id).toBe(999);
+  });
+
+  it("should rollback without invoking draft on rejection", async () => {
+    const { value, addBook } = store(($) => ({
+      books: [] as { id: number; title: string }[],
+      addBook: (title: string) =>
+        $.optimistic(
+          ({ draft }) => $.push("books", { id: draft("id", 1), title }),
+          Promise.reject(new Error("network")),
+        ),
+    }));
+    await addBook("1984").catch(() => {});
+    expect(value.books).toEqual([]);
+  });
 });
 
 describe("createStore (factory pattern)", () => {

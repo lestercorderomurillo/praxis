@@ -32,7 +32,7 @@ Every function property becomes an action, everything else becomes reactive stat
 import { createStore } from "praxis/react";
 
 type Book = {
-  id: number;
+  id: string;
   title: string;
   author: string;
   year: number;
@@ -40,21 +40,26 @@ type Book = {
 
 const useBooks = createStore(({ push, remove, reset, optimistic }) => ({
   books: [
-    { id: 1, title: "1984", author: "George Orwell", year: 1949 },
-    { id: 2, title: "Brave New World", author: "Aldous Huxley", year: 1932 },
-    { id: 3, title: "Fahrenheit 451", author: "Ray Bradbury", year: 1953 },
+    { id: "1", title: "1984", author: "George Orwell", year: 1949 },
+    { id: "2", title: "Brave New World", author: "Aldous Huxley", year: 1932 },
+    { id: "3", title: "Fahrenheit 451", author: "Ray Bradbury", year: 1953 },
   ] as Book[],
 
   addBook: (book: Omit<Book, "id">) =>
     optimistic(
-      ({ isDraft }) => push("books", { ...book, id: Date.now(), isLoading: isDraft }),
+      ({ isDraft, draft }) =>
+        push("books", {
+          ...book,
+          id: draft("id", `tmp-${Date.now()}`),
+          isLoading: isDraft,
+        }),
       fetch("https://api.example.com/books", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(book),
-      }),
+      }).then((res) => res.json()),
     ),
-  removeBook: (id: number) => remove("books", (b) => b.id === id),
+  removeBook: (id: string) => remove("books", (b) => b.id === id),
   resetBooks: () => reset(),
 }));
 ```
@@ -124,3 +129,5 @@ Define state and actions in a single object. Returns a hook that gives you both.
 | `pop(key, "start")` | Remove and return the first item |
 | `reset()` | Reset all state to initial values |
 | `optimistic(mutation, promise)` | Apply mutation optimistically; finalize on resolve, rollback on reject |
+
+The mutation runs twice: once with `isDraft: true` for the immediate UI update, then again with `isDraft: false` once the promise resolves. Use `draft(key, fallback)` inside the mutation to swap a placeholder value for the real one from the response — `draft` returns the fallback during the optimistic pass and pulls `key` from the resolved value on finalize.
